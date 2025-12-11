@@ -52,8 +52,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='User',
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('password', models.IntegerField()),
+                ('id', models.CharField(primary_key=True, max_length=20, serialize=False)),
+                ('password', models.CharField(max_length=255)),
                 ('name', models.CharField(max_length=10)),
                 ('registration_number', models.CharField(max_length=13)),
                 ('joined_at', models.DateTimeField(default=datetime.datetime(2025, 12, 11, 19, 16, 18, 781998))),
@@ -69,7 +69,14 @@ class Migration(migrations.Migration):
                 ('number', models.CharField(default='', max_length=20, unique=True)),
                 ('created_at', models.DateTimeField(default=datetime.datetime(2025, 12, 11, 19, 16, 18, 781998))),
                 ('bank_id', models.ForeignKey(db_column='bank_id', on_delete=django.db.models.deletion.CASCADE, to='PaymentApp.bank')),
-                ('user_id', models.ForeignKey(db_column='user_id', default=1, on_delete=django.db.models.deletion.CASCADE, to='PaymentApp.user')),
+                (
+                    'user_id', models.ForeignKey(
+                        db_column='user_id',
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to='PaymentApp.user',
+                        to_field='id'
+                    )
+                ),
             ],
             options={
                 'db_table': 'account',
@@ -83,14 +90,23 @@ class Migration(migrations.Migration):
                 ('amount', models.IntegerField()),
                 ('balance', models.IntegerField()),
                 ('account_id', models.ForeignKey(db_column='account_id', on_delete=django.db.models.deletion.CASCADE, to='PaymentApp.account')),
-                ('account_number', models.ForeignKey(
-                    db_column='account_number',
-                    on_delete=django.db.models.deletion.CASCADE,
-                    to='PaymentApp.account',
-                    to_field='number')
-                 ),
+                (
+                    'account_number', models.ForeignKey(
+                        db_column='account_number',
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to='PaymentApp.account',
+                        to_field='number'
+                    )
+                ),
                 ('place_id', models.ForeignKey(db_column='place_id', default='', on_delete=django.db.models.deletion.CASCADE, related_name='a', to='PaymentApp.place')),
-                ('user_id', models.ForeignKey(db_column='user_id', default=1, on_delete=django.db.models.deletion.CASCADE, to='PaymentApp.user')),
+                (
+                    'user_id', models.ForeignKey(
+                        db_column='user_id',
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to='PaymentApp.user',
+                        to_field='id'
+                    )
+                ),
             ],
             options={
                 'db_table': 'payment',
@@ -103,7 +119,14 @@ class Migration(migrations.Migration):
                 ('created_at', models.DateTimeField(default=datetime.datetime(2025, 12, 11, 19, 16, 18, 784866))),
                 ('title', models.CharField(max_length=20)),
                 ('content', models.CharField(max_length=100)),
-                ('user_id', models.ForeignKey(db_column='user_id', on_delete=django.db.models.deletion.CASCADE, to='PaymentApp.user')),
+                (
+                    'user_id', models.ForeignKey(
+                        db_column='user_id',
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to='PaymentApp.user',
+                        to_field='id'
+                    )
+                ),
             ],
             options={
                 'db_table': 'alert',

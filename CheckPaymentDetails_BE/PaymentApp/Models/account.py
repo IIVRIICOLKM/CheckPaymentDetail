@@ -10,6 +10,7 @@ class Account(models.Model):
     user_id = models.ForeignKey(
         User,
         db_column='user_id',
+        to_field='id',
         on_delete=models.CASCADE,
         default=1,
     )
