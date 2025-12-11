@@ -1,0 +1,12 @@
+__pycache__/
+.DS_Store
+
+.env
+.venv
+
+*/local_settings.py
+.idea/
+
+sms_backup_20250729.csv
+first_names.csv
+/auth
