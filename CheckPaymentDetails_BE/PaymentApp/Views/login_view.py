@@ -21,13 +21,13 @@ class SignupView(APIView):
             user = serializer.save()
 
             return Response(
-                {"message": "signup success", "user_id": user.id},
+                {"message": "로그인 성공", "user_id": user.id},
                 status=status.HTTP_201_CREATED
             )
 
         except Exception as e:
             return Response(
-                {"error": "signup failed", "details": str(e)},
+                {"error": "로그인 실패", "details": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -42,7 +42,7 @@ class LoginView(APIView):
             # 입력값 검증
             if not user_id or not password:
                 return Response(
-                    {"error": "ID and password are required."},
+                    {"error": "아이디와 패스워드를 입력해주세요."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -51,14 +51,14 @@ class LoginView(APIView):
                 user = User.objects.get(id=user_id)
             except User.DoesNotExist:
                 return Response(
-                    {"error": "Invalid ID or password."},
+                    {"error": "아이디가 존재하지 않습니다."},
                     status=status.HTTP_401_UNAUTHORIZED
                 )
 
             # 비밀번호 검증
             if not check_password(password, user.password):
                 return Response(
-                    {"error": "Invalid ID or password."},
+                    {"error": "올바르지 않은 비밀번호입니다."},
                     status=status.HTTP_401_UNAUTHORIZED
                 )
 
@@ -67,7 +67,7 @@ class LoginView(APIView):
 
             return Response(
                 {
-                    "message": "login success",
+                    "message": "로그인 성공",
                     "user": UserSerializer(user).data,
                     "access_token": str(refresh.access_token),
                     "refresh_token": str(refresh)
