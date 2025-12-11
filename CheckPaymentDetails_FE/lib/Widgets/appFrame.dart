@@ -8,7 +8,7 @@ class mainAppBar extends StatelessWidget{
   @override
   Widget build(BuildContext context) {
     return Container(
-        height: 56,
+        height: 90,
         child: Scaffold(
           appBar : AppBar(backgroundColor: Colors.white, toolbarHeight: 0),
           body:
