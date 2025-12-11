@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:network_info_plus/network_info_plus.dart';
-import 'package:payment_app/Services/getHostNUrl.dart';
+import 'package:payment_app/Services/urlmap.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<Response?> fetchPaymentAmounts({required DateTime selectedDay, required int nowIndex}) async {
@@ -30,7 +30,7 @@ Future<Response?> fetchPaymentAmounts({required DateTime selectedDay, required i
 
   try {
     final response = await dio.get(
-      apiURL, // 👉 백엔드 API 주소
+      apiURL,
       data: {
         'Selected_Date': selectedDay.toString().substring(0, 10),
       },

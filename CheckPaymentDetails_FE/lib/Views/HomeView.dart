@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:payment_app/Widgets/appFrame.dart';
 import 'package:payment_app/Widgets/statefulViews.dart';
 import 'package:dio/dio.dart';
-import 'package:payment_app/Services/fetchPaymentInformation.dart';
+import 'package:payment_app/Services/fetchPaymentInformationService.dart';
 
 class HomeView extends StatelessWidget{
   HomeView(){}

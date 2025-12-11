@@ -1,8 +1,8 @@
-import 'package:dio/dio.dart';
-import 'package:network_info_plus/network_info_plus.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 final URLS = {
+  'signup' : 'api/signup',
+  'login' : 'api/login',
   'paymentsperday' : 'api/payments/day',
   'paymentspermonth' : 'api/payments/month',
   'paymentsperyear' : 'api/payments/year',
