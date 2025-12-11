@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:payment_app/Services/fetchPaymentInformation.dart';
+import 'package:payment_app/Services/fetchPaymentInformationService.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:dio/dio.dart';

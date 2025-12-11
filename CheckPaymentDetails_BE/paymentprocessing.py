@@ -49,61 +49,6 @@ def preprocessing_date(messages):
         msg[i][1] = processed_msg
     return msg
 
-# def messages_to_columned_datas(messages):
-#     # csv 형태로 백업한 지출 내역 문자 데이터의 body에 있는 정보를 mysql 포맷으로 전처리하는 함수
-#     # messages : numpy.values
-#     # return : messages.reshpae(len(messages), column_counts)
-#
-#     msgs = messages
-#     new_msgs = np.array([])
-#     err_count = 0
-#
-#     for msg in msgs:
-#         account_num, place, amount, balance = '', '', 0, 0
-#
-#         if not msg[0].startswith('['):
-#             err_count += 1
-#             continue
-#
-#         # Slice body datas with token
-#         # account_num, place, deposit or withdraw, amount, balance
-#         first_sliced = msg[0][16:].replace(',', '')
-#         # place, deposit or withdraw, amount, balance
-#         second_sliced = first_sliced[12:]
-#         place_end_idx = second_sliced.find('\n')
-#         # deposit or withdraw, amount, balance
-#         third_sliced = second_sliced[place_end_idx + 1:]
-#         payed_type_end_idx = third_sliced.find('\n')
-#         # amount, balance
-#         fourth_sliced = third_sliced[payed_type_end_idx + 1:]
-#
-#         # Process outlier datasets
-#         if second_sliced[:place_end_idx].find('출금') != -1 or \
-#         second_sliced[:place_end_idx].find('입금') != -1:
-#             if third_sliced[:payed_type_end_idx].find('출금') == -1 and \
-#             third_sliced[:payed_type_end_idx].find('입금') == -1:
-#                 fourth_sliced = third_sliced
-#                 third_sliced = second_sliced
-#         else:
-#             place = second_sliced[:place_end_idx]
-#
-#         amount_end_idx = fourth_sliced.find('\n')
-#         # balance
-#         fifth_sliced = fourth_sliced[amount_end_idx + 1:]
-#
-#         # Put preprocessed datas in column variables and append in array
-#         account_num = first_sliced[:11]
-#         amount = -1 * int(fourth_sliced[:amount_end_idx]) \
-#             if third_sliced.find('입금') == -1 \
-#             else int(fourth_sliced[:amount_end_idx])
-#         balance = int(fifth_sliced[2:])
-#
-#         new_msg = np.array([])
-#         new_msg = np.append(new_msg, np.array([msg[1], account_num, place, amount, balance]))
-#         new_msgs = np.append(new_msgs, new_msg)
-#     # Broadcast
-#     return new_msgs.reshape(len(msgs) - err_count, 5)
-
 def messages_to_columned_datas(messages):
     """
         csv 형태로 백업한 지출 내역 문자 데이터의 body에 있는 정보를 mysql 포맷으로 전처리하는 함수 \n

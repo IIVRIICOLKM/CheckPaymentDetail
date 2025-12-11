@@ -1,12 +1,12 @@
 import pandas as pd
 import re
-from PaymentApp.DataSets.dataset_dir import DATASET_DIR
+from PaymentApp.DataSets.dataset_dir import dataset_dir
 from place_name_classifier import place_name_classifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-df_fn = pd.read_csv(DATASET_DIR + 'first_names.csv')
+df_fn = pd.read_csv(dataset_dir + 'first_names.csv')
 SURNAMES = ''.join(df_fn['first_name'].tolist())
 NAME_RE = re.compile(rf"^([{SURNAMES}])[가-힣]{{2}}|(토스)([{SURNAMES}])[가-힣]{{2}}$")
 
@@ -58,7 +58,7 @@ def label_people_in_csv(input_csv: str, output_csv: str = None):
     return new_df
 
 if __name__ == "__main__":
-    output_csv = label_people_in_csv(DATASET_DIR + "place_list.csv", DATASET_DIR + "place_list_labeled.csv")
+    output_csv = label_people_in_csv(dataset_dir + "place_list.csv", dataset_dir + "place_list_labeled.csv")
     y_actual, y_pred = output_csv['is_people'].tolist(), output_csv['pred_is_people'].tolist()
     print('Accuracy = ', accuracy_score(y_actual, y_pred))
     print('Report = ', classification_report(y_actual, y_pred))

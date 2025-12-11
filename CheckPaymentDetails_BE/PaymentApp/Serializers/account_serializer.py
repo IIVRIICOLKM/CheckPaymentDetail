@@ -4,4 +4,4 @@ from ..Models.account import Account
 class AccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = Account
-        fields = ['account_id', 'account_number', 'bank_id']
+        fields = ['id', 'number', 'bank_id']

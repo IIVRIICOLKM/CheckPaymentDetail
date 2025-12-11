@@ -7,7 +7,6 @@ import os
 
 load_dotenv()
 db_name = os.getenv('MYSQL_DATABASE')
-kakao_rest_api_key = os.getenv('KAKAO_REST_API_KEY')
 
 # acc_infos -> 계좌 번호 등의 정보 저장
 def set_account_table(acc_nums, acc_infos_in_db):
@@ -46,7 +45,7 @@ def parse_payment_to_database(table, acc_nums, address):
         mysql_cur.execute(f'select * from {db_name}.account;')
         acc_infos_in_db = mysql_cur.fetchall()
 
-        mysql_cur.execute(f'select bank_id from {db_name}.bank where phone_num={address};')
+        mysql_cur.execute(f'select id from {db_name}.bank where phone_num={address};')
         _bank_id = mysql_cur.fetchone()
         _bank_id = _bank_id[0]
 
@@ -56,8 +55,8 @@ def parse_payment_to_database(table, acc_nums, address):
             _id, _acc_num = row[0], row[1]
 
             mysql_cur.execute(
-                f'insert into {db_name}.account (account_id, account_number, bank_id, account_registered_at, account_updated_at)'
-                f'values {_id, _acc_num, _bank_id, str(datetime.now()), str(datetime.now())};')
+                f'insert into {db_name}.account (id, number, bank_id, created_at)'
+                f'values {_id, _acc_num, _bank_id, str(datetime.now())};')
 
         # 업데이트 정보 : 모듈 분리 예정
         if acc_result == []:
@@ -90,10 +89,13 @@ def parse_payment_to_database(table, acc_nums, address):
         print('error in ppdb ' + str(e))
         mysql_conn.commit()
 
-if __name__ == '__main__':
+def pipeline():
     messages = get_messages('sms_backup_20250729.csv')
     messages = preprocessing_date(messages)
     # 단일 은행의 전화번호만 가져온다고 가정하기
     address = messages[0][2]
     payment_table, acc_nums = messages_to_columned_datas(messages)
     parse_payment_to_database(payment_table, acc_nums, address)
+
+if __name__ == '__main__':
+    pipeline()
