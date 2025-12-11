@@ -10,3 +10,5 @@ __pycache__/
 sms_backup_20250729.csv
 first_names.csv
 /auth
+
+/PaymentApp/DataSets/

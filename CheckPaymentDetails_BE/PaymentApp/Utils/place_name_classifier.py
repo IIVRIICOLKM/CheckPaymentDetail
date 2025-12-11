@@ -1,11 +1,11 @@
 import pandas as pd
-from PaymentApp.DataSets.dataset_dir import DATASET_DIR
+from PaymentApp.DataSets.dataset_dir import dataset_dir
 
-df_m, df_w = pd.read_csv(DATASET_DIR + 'men_names.csv'), pd.read_csv(DATASET_DIR + 'women_names.csv')
+df_m, df_w = pd.read_csv(dataset_dir + 'men_names.csv'), pd.read_csv(dataset_dir + 'women_names.csv')
 df_m, df_w = df_m[df_m['weight'] > 11], df_w[df_w['weight'] > 11]
 
 import pandas as pd
-from PaymentApp.DataSets.dataset_dir import DATASET_DIR
+from PaymentApp.DataSets.dataset_dir import dataset_dir
 
 def place_name_classifier(place : str) -> float:
     # 인덱스 새로 바인딩

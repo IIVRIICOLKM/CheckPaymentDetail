@@ -1,5 +1,5 @@
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 
-class BankView(APIView):
+class AlertView(APIView):
     permission_classes = [AllowAny]
