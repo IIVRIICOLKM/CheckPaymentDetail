@@ -26,7 +26,7 @@ class mainAppBar extends StatelessWidget{
                       children: <Widget>[
                         const SizedBox(width: 10),
                         const Text(appName, style: const TextStyle(fontSize: 20, color: Colors.black, fontWeight: FontWeight.bold)),
-                        const SizedBox(width : 220),
+                        const SizedBox(width : 190),
                         IconButton(
                           onPressed: (){
                             Navigator.push(
