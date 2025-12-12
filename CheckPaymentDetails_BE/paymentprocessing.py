@@ -55,18 +55,29 @@ def messages_to_columned_datas(messages):
         messages : numpy.values \n
         return : np.array(msgs)
     """
-    msgs, account_nums = [], []
+    msgs, account_nums, banks, addresses = [], [], [], []
     account_nums.append(messages[0][0][16:27])
-
+    banks.append(messages[0][0][1:3])
+    addresses.append(messages[0][2])
+    accountmap = {}
     for msg in messages:
         if not msg[0].startswith('['):
             continue
         try:
+            bank = msg[0][1:3]
+            address = msg[2]
             body = msg[0][16:].replace(',', '')
             account_num = body[:11]
+            accountmap[account_num] = bank
 
             if account_num not in account_nums:
                 account_nums.append(account_num)
+
+            if bank not in banks:
+                banks.append(bank)
+
+            if address not in addresses:
+                addresses.append(address)
 
             rest = body[12:]
             lines = rest.split('\n')
@@ -92,4 +103,5 @@ def messages_to_columned_datas(messages):
         except Exception as e:
             print('error in messaged_to_columned_datas' + str(e))
             continue
-    return np.array(msgs), account_nums
+
+    return np.array(msgs), banks, addresses, accountmap, account_nums

@@ -3,6 +3,9 @@ import 'package:payment_app/Services/fetchPaymentInformationService.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:dio/dio.dart';
+import 'package:fl_chart/fl_chart.dart';
+
+import 'dateRangeDialog.dart';
 
 // Bank Tab
 class Bank{
@@ -44,19 +47,7 @@ class _BankAccordion extends State<BankAccordion> {
           minTileHeight: 10,
           tilePadding: EdgeInsets.symmetric(horizontal: 5.0),
           children: <Widget>[
-            for(int i = 0; i < 5; i++)
-              Container(
-                  width: 120,
-                  child: FilledButton(
-                      onPressed: () async {
-
-                      },
-                      child: Text('버튼 $i', style: TextStyle(color: Colors.black)),
-                      style: FilledButton.styleFrom(
-                          backgroundColor: Colors.grey[100]
-                      )
-                  )
-              )
+            Text('KB', style: TextStyle(color: Colors.black))
           ],
         )
     );
@@ -66,17 +57,36 @@ class _BankAccordion extends State<BankAccordion> {
 // Tab Screen
 class TabBarScreen extends StatefulWidget with ChangeNotifier{
   TabBarScreen({Key? key}) : super(key: key);
+
   int nowIndex = 0;
   DateTime _selectedDay = DateTime.now();
+  // 기간별 조회용
+  DateTime? rangeStart;
+  DateTime? rangeEnd;
+
   Response? response;
 
   Future<Response?> getResponseByTabBar() async {
     this.response = await fetchPaymentAmounts(selectedDay: _selectedDay, nowIndex: nowIndex);
   }
 
-  void updateIndex(TabController tabController) async {
+  void updateIndex(TabController tabController, BuildContext context) async {
     nowIndex = tabController.index;
-    await getResponseByTabBar();
+    if (nowIndex == 3) {
+      final range = await showDateRangePickerDialog(context);
+      if (range == null) return;
+
+      rangeStart = range.start;
+      rangeEnd = range.end;
+
+      response = await fetchPaymentAmountsByRange(
+        start: rangeStart!,
+        end: rangeEnd!,
+      );
+    }
+    else {
+      await getResponseByTabBar();
+    }
     notifyListeners();
   }
 
@@ -91,7 +101,7 @@ class TabBarScreen extends StatefulWidget with ChangeNotifier{
 
 class _TabBarScreenState extends State<TabBarScreen> with TickerProviderStateMixin{
   late TabController tabController = TabController(
-    length: 3,
+    length: 4,
     vsync: this,
     initialIndex: 0,
     /// 탭 변경 애니메이션 시간
@@ -121,6 +131,7 @@ class _TabBarScreenState extends State<TabBarScreen> with TickerProviderStateMix
           Tab(text: "일별"),
           Tab(text: "월별"),
           Tab(text: "연별"),
+          Tab(text: "기간별"),
         ],
         labelColor: Colors.black,
         labelStyle: const TextStyle(
@@ -136,7 +147,7 @@ class _TabBarScreenState extends State<TabBarScreen> with TickerProviderStateMix
         indicatorSize: TabBarIndicatorSize.tab,
         onTap: (index) => {
           setState(() {
-            widget.updateIndex(this.tabController);
+            widget.updateIndex(this.tabController, context);
           })
         }
     );
@@ -251,18 +262,42 @@ class _PaymentPresentationState extends State<PaymentPresentation>{
                 else if (tabscr.nowIndex == 1)
                   Text('${oneMonthAgo.year}년 ${oneMonthAgo.month}월 ${oneMonthAgo.day}일 부터 '
                       '${widget.selectedDay!.year}년 ${widget.selectedDay!.month}월 ${widget.selectedDay!.day}일 까지의 소비내역입니다.')
-                else
+                else if (tabscr.nowIndex == 2)
                   Text('${oneYearAgo.year}년 ${oneYearAgo.month}월 ${oneYearAgo.day}일 부터 '
-                      '${widget.selectedDay!.year}년 ${widget.selectedDay!.month}월 ${widget.selectedDay!.day}일 까지의 소비내역입니다.'),
+                      '${widget.selectedDay!.year}년 ${widget.selectedDay!.month}월 ${widget.selectedDay!.day}일 까지의 소비내역입니다.')
+                else if (tabscr.nowIndex == 3)
+                    Text(
+                        '${tabscr.rangeStart!.year}년 ${tabscr.rangeStart!.month}월 ${tabscr.rangeStart!.day}일 ~ '
+                            '${tabscr.rangeEnd!.year}년 ${tabscr.rangeEnd!.month}월 ${tabscr.rangeEnd!.day}일 기간 소비 내역입니다.'
+                    ),
+
                 if (widget.response != null)
-                  Text('총 소비액은 ${widget.response!.data['consumption_amount']}원 입니다.'),
+                  Text('총 소비액은 ${widget.response!.data['total_consumption_amount']}원 입니다.'),
+
                 SizedBox(height: 40),
-                Container(
-                  width: 300,
-                  height: 300,
-                  padding: EdgeInsets.all(20),
-                  color: Colors.greenAccent,
-                ),
+                if (widget.response != null)
+                  Container(
+                    width: 300,
+                    height: 300,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 20),
+                          CategoryPieChart(
+                            categoryAmounts:
+                            (widget.response!.data['category_breakdown'] as Map<String, dynamic>)
+                                .map((key, value) => MapEntry(key, (value as num).toDouble())),
+                          ),
+                        ],
+                      )
+                    ),
+                  ),
+
                 Divider(height: 2, color: Colors.black)
               ],
             );
@@ -316,5 +351,127 @@ class _TableCalendarScreenState extends State<TableCalendarScreen> {
         return isSameDay(_selectedDay, day);
       },
     );
+  }
+}
+
+class CategoryPieChart extends StatelessWidget {
+  final Map<String, double> categoryAmounts;
+
+  const CategoryPieChart({super.key, required this.categoryAmounts});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = categoryAmounts.values.fold(0.0, (a, b) => a + b);
+
+    if (total == 0) {
+      return const Center(child: Text("소비 내역 없음"));
+    }
+
+    // 금액 기준 내림차순 정렬
+    final sortedEntries = categoryAmounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    // 가장 큰 카테고리
+    final topCategory = sortedEntries.first.key;
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 200,
+          child: PieChart(
+            PieChartData(
+              sectionsSpace: 2,
+              centerSpaceRadius: 40,
+              sections: sortedEntries.map((entry) {
+                final percent = entry.value / total * 100;
+                final isTop = entry.key == topCategory;
+
+                return PieChartSectionData(
+                  value: entry.value,
+                  color: _categoryColor(entry.key),
+                  radius: isTop ? 78 : 70,
+                  title: '${percent.toStringAsFixed(1)}%',
+                  titleStyle: TextStyle(
+                    fontSize: 11,
+                    fontWeight: isTop ? FontWeight.bold : FontWeight.normal,
+                    color: Colors.black,
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // ✅ Legend (금액 내림차순 + 최상위 강조)
+        Column(
+          children: sortedEntries.map((entry) {
+            final percent = entry.value / total * 100;
+            final isTop = entry.key == topCategory;
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: _categoryColor(entry.key),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      entry.key,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isTop ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${_formatCurrency(entry.value)} · ${percent.toStringAsFixed(1)}%',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: isTop ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  String _formatCurrency(double value) {
+    final s = value.toInt().toString();
+    return '${s.replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+          (m) => '${m[1]},',
+    )}원';
+  }
+
+  Color _categoryColor(String category) {
+    switch (category) {
+      case '카페':
+        return Colors.brown.shade300;
+      case '편의점':
+        return Colors.greenAccent;
+      case '패스트푸드':
+        return Colors.redAccent;
+      case '식당':
+        return Colors.orangeAccent;
+      case '문화/여가':
+        return Colors.purpleAccent;
+      case '기타':
+        return Colors.grey;
+      default:
+        return Colors.blueGrey;
+    }
   }
 }
