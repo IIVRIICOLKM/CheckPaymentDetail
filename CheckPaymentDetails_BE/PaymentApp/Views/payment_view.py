@@ -70,3 +70,66 @@ class PaymentAmountView(APIView):
 
         except Exception as e:
             return Response({"error": "failed", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class PaymentRangeAmountView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        try:
+            start_date_str = request.query_params.get("start_date")
+            end_date_str = request.query_params.get("end_date")
+
+            if not start_date_str or not end_date_str:
+                return Response(
+                    {"error": "start_date and end_date are required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+
+            if start_date > end_date:
+                return Response(
+                    {"error": "start_date must be before end_date"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            payments = Payment.objects.filter(
+                payment_day__date__range=[start_date, end_date],
+                amount__lt=0  # 출금만
+            ).select_related("place_id__place_category_id")
+
+            total_amount = 0
+            category_breakdown = {}
+
+            for p in payments:
+                place = p.place_id
+                category_obj = place.place_category_id
+                category_name = category_obj.name
+
+                # 금융 카테고리는 제외
+                if category_name == "금융":
+                    continue
+
+                spend = -p.amount
+                total_amount += spend
+                category_breakdown[category_name] = (
+                    category_breakdown.get(category_name, 0) + spend
+                )
+
+            return Response(
+                {
+                    "period": "range",
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "total_consumption_amount": total_amount,
+                    "category_breakdown": category_breakdown,
+                },
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            return Response(
+                {"error": "failed", "details": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

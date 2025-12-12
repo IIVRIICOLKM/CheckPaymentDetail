@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 // 제작 페이지 등록
 import '../Views/HomeView.dart';
 import '../Views/LoginView.dart';
+import '../Views/SettingView.dart';
 import '../Views/SignupView.dart';
 
 class RoutingPoint {
   // 앱 전체 route 이름 관리
   static const String home = '/';
   static const String login = '/login';
+  static const String setting = '/setting';
   static const String signup = '/signup';
 
   // route → 화면 위젯 빌더 매핑
@@ -28,7 +30,10 @@ class RoutingPoint {
         return MaterialPageRoute(
           builder: (_) => LoginView(),
         );
-
+      case setting:
+        return MaterialPageRoute(
+          builder: (_) => SettingView(),
+        );
       case signup:
         return MaterialPageRoute(
           builder: (_) => SignupView(),

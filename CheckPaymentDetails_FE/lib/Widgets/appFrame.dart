@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-final String appName = 'PaymentApp';
+import '../Routers/routingPoint.dart';
+
+const String appName = 'PaymentApp';
 
 class mainAppBar extends StatelessWidget{
   const mainAppBar({super.key, name});
@@ -22,8 +24,22 @@ class mainAppBar extends StatelessWidget{
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: <Widget>[
-                        SizedBox(width: 10),
-                        Text(appName, style: const TextStyle(fontSize: 20, color: Colors.black, fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 10),
+                        const Text(appName, style: const TextStyle(fontSize: 20, color: Colors.black, fontWeight: FontWeight.bold)),
+                        const SizedBox(width : 220),
+                        IconButton(
+                          onPressed: (){
+                            Navigator.push(
+                                context,
+                                RoutingPoint.generateRoute(
+                                    settings: RouteSettings(
+                                        name: RoutingPoint.setting
+                                    )
+                                )
+                            );
+                          },
+                          icon: Icon(Icons.settings)
+                        )
                       ],
                     ),
                   ),

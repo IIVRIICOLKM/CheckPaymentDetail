@@ -5,6 +5,8 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:dio/dio.dart';
 import 'package:fl_chart/fl_chart.dart';
 
+import 'dateRangeDialog.dart';
+
 // Bank Tab
 class Bank{
   Bank({
@@ -45,19 +47,7 @@ class _BankAccordion extends State<BankAccordion> {
           minTileHeight: 10,
           tilePadding: EdgeInsets.symmetric(horizontal: 5.0),
           children: <Widget>[
-            for(int i = 0; i < 5; i++)
-              Container(
-                  width: 120,
-                  child: FilledButton(
-                      onPressed: () async {
-
-                      },
-                      child: Text('버튼 $i', style: TextStyle(color: Colors.black)),
-                      style: FilledButton.styleFrom(
-                          backgroundColor: Colors.grey[100]
-                      )
-                  )
-              )
+            Text('KB', style: TextStyle(color: Colors.black))
           ],
         )
     );
@@ -67,17 +57,36 @@ class _BankAccordion extends State<BankAccordion> {
 // Tab Screen
 class TabBarScreen extends StatefulWidget with ChangeNotifier{
   TabBarScreen({Key? key}) : super(key: key);
+
   int nowIndex = 0;
   DateTime _selectedDay = DateTime.now();
+  // 기간별 조회용
+  DateTime? rangeStart;
+  DateTime? rangeEnd;
+
   Response? response;
 
   Future<Response?> getResponseByTabBar() async {
     this.response = await fetchPaymentAmounts(selectedDay: _selectedDay, nowIndex: nowIndex);
   }
 
-  void updateIndex(TabController tabController) async {
+  void updateIndex(TabController tabController, BuildContext context) async {
     nowIndex = tabController.index;
-    await getResponseByTabBar();
+    if (nowIndex == 3) {
+      final range = await showDateRangePickerDialog(context);
+      if (range == null) return;
+
+      rangeStart = range.start;
+      rangeEnd = range.end;
+
+      response = await fetchPaymentAmountsByRange(
+        start: rangeStart!,
+        end: rangeEnd!,
+      );
+    }
+    else {
+      await getResponseByTabBar();
+    }
     notifyListeners();
   }
 
@@ -92,7 +101,7 @@ class TabBarScreen extends StatefulWidget with ChangeNotifier{
 
 class _TabBarScreenState extends State<TabBarScreen> with TickerProviderStateMixin{
   late TabController tabController = TabController(
-    length: 3,
+    length: 4,
     vsync: this,
     initialIndex: 0,
     /// 탭 변경 애니메이션 시간
@@ -122,6 +131,7 @@ class _TabBarScreenState extends State<TabBarScreen> with TickerProviderStateMix
           Tab(text: "일별"),
           Tab(text: "월별"),
           Tab(text: "연별"),
+          Tab(text: "기간별"),
         ],
         labelColor: Colors.black,
         labelStyle: const TextStyle(
@@ -137,7 +147,7 @@ class _TabBarScreenState extends State<TabBarScreen> with TickerProviderStateMix
         indicatorSize: TabBarIndicatorSize.tab,
         onTap: (index) => {
           setState(() {
-            widget.updateIndex(this.tabController);
+            widget.updateIndex(this.tabController, context);
           })
         }
     );
@@ -252,11 +262,18 @@ class _PaymentPresentationState extends State<PaymentPresentation>{
                 else if (tabscr.nowIndex == 1)
                   Text('${oneMonthAgo.year}년 ${oneMonthAgo.month}월 ${oneMonthAgo.day}일 부터 '
                       '${widget.selectedDay!.year}년 ${widget.selectedDay!.month}월 ${widget.selectedDay!.day}일 까지의 소비내역입니다.')
-                else
+                else if (tabscr.nowIndex == 2)
                   Text('${oneYearAgo.year}년 ${oneYearAgo.month}월 ${oneYearAgo.day}일 부터 '
-                      '${widget.selectedDay!.year}년 ${widget.selectedDay!.month}월 ${widget.selectedDay!.day}일 까지의 소비내역입니다.'),
+                      '${widget.selectedDay!.year}년 ${widget.selectedDay!.month}월 ${widget.selectedDay!.day}일 까지의 소비내역입니다.')
+                else if (tabscr.nowIndex == 3)
+                    Text(
+                        '${tabscr.rangeStart!.year}년 ${tabscr.rangeStart!.month}월 ${tabscr.rangeStart!.day}일 ~ '
+                            '${tabscr.rangeEnd!.year}년 ${tabscr.rangeEnd!.month}월 ${tabscr.rangeEnd!.day}일 기간 소비 내역입니다.'
+                    ),
+
                 if (widget.response != null)
                   Text('총 소비액은 ${widget.response!.data['total_consumption_amount']}원 입니다.'),
+
                 SizedBox(height: 40),
                 if (widget.response != null)
                   Container(
@@ -350,6 +367,13 @@ class CategoryPieChart extends StatelessWidget {
       return const Center(child: Text("소비 내역 없음"));
     }
 
+    // 금액 기준 내림차순 정렬
+    final sortedEntries = categoryAmounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    // 가장 큰 카테고리
+    final topCategory = sortedEntries.first.key;
+
     return Column(
       children: [
         SizedBox(
@@ -358,18 +382,18 @@ class CategoryPieChart extends StatelessWidget {
             PieChartData(
               sectionsSpace: 2,
               centerSpaceRadius: 40,
-              sections: categoryAmounts.entries.map((entry) {
+              sections: sortedEntries.map((entry) {
                 final percent = entry.value / total * 100;
+                final isTop = entry.key == topCategory;
 
                 return PieChartSectionData(
                   value: entry.value,
                   color: _categoryColor(entry.key),
-                  radius: 70,
-                  // ✅ 차트에는 퍼센트만
+                  radius: isTop ? 78 : 70,
                   title: '${percent.toStringAsFixed(1)}%',
-                  titleStyle: const TextStyle(
+                  titleStyle: TextStyle(
                     fontSize: 11,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: isTop ? FontWeight.bold : FontWeight.normal,
                     color: Colors.black,
                   ),
                 );
@@ -380,10 +404,11 @@ class CategoryPieChart extends StatelessWidget {
 
         const SizedBox(height: 12),
 
-        // ✅ Legend: 카테고리 + 금액 + 비율
+        // ✅ Legend (금액 내림차순 + 최상위 강조)
         Column(
-          children: categoryAmounts.entries.map((entry) {
+          children: sortedEntries.map((entry) {
             final percent = entry.value / total * 100;
+            final isTop = entry.key == topCategory;
 
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
@@ -401,14 +426,17 @@ class CategoryPieChart extends StatelessWidget {
                   Expanded(
                     child: Text(
                       entry.key,
-                      style: const TextStyle(fontSize: 12),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isTop ? FontWeight.bold : FontWeight.normal,
+                      ),
                     ),
                   ),
                   Text(
                     '${_formatCurrency(entry.value)} · ${percent.toStringAsFixed(1)}%',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: isTop ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                 ],
@@ -447,4 +475,3 @@ class CategoryPieChart extends StatelessWidget {
     }
   }
 }
-

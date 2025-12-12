@@ -50,3 +50,25 @@ Future<Response?> fetchPaymentAmounts({
     return null;
   }
 }
+
+Future<Response?> fetchPaymentAmountsByRange({
+  required DateTime start,
+  required DateTime end,
+}) async {
+  final dio = Dio();
+  final String? ip = await NetworkInfo().getWifiIP();
+
+  String baseUrl = ip!.startsWith('10.0.2')
+      ? 'http://10.0.2.2:8000/'
+      : 'http://$HOSTURL';
+
+  final apiURL = '${baseUrl}api/payments/range';
+
+  return dio.get(
+    apiURL,
+    queryParameters: {
+      'start_date': start.toIso8601String().substring(0, 10),
+      'end_date': end.toIso8601String().substring(0, 10),
+    },
+  );
+}

@@ -16,6 +16,7 @@ class HomeView extends StatelessWidget{
     TableCalendarScreen tableCalendarScreen = TableCalendarScreen();
 
     return Scaffold(
+        backgroundColor: Colors.white,
         body: Center(
             child: Column(
                 mainAxisAlignment: MainAxisAlignment.start,
