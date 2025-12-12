@@ -99,7 +99,7 @@ def set_place_table(place_name : str, mysql_cur):
         mysql_cur.execute(f'SELECT id FROM {db_name}.place_category WHERE name = "{category_name}";')
         category_id = mysql_cur.fetchone()[0]
 
-        if category_id != 5:
+        if category_id != 6:
             mysql_cur.execute(f'insert into {db_name}.place (name, is_financial_transaction, place_category_id) values ("{place_name}", 0, "{category_id}");')
         else:
             mysql_cur.execute(
