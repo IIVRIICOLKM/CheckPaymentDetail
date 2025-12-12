@@ -20,44 +20,53 @@ class PaymentAmountView(APIView):
     def get(self, request, period_type):
         try:
             if period_type not in self.PERIOD_MAP:
-                return Response(
-                    {"error": "invalid period type"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response({"error": "invalid period type"}, status=status.HTTP_400_BAD_REQUEST)
+
+            selected_date_str = request.query_params.get("Selected_Date")
+            if not selected_date_str:
+                return Response({"error": "Selected_Date is required"}, status=status.HTTP_400_BAD_REQUEST)
 
             selected_period = self.PERIOD_MAP[period_type]
-
-            # GET 요청에서 데이터는 request.query_params 로 받아야 함
-            selected_date_str = request.query_params.get("Selected_Date")
-
-            if not selected_date_str:
-                return Response(
-                    {"error": "Selected_Date is required"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
             last_date = datetime.strptime(selected_date_str, "%Y-%m-%d").date()
             first_date = last_date - timedelta(days=selected_period)
 
             payments = Payment.objects.filter(
-                payment_day__date__range=[first_date, last_date]
+                payment_day__date__range=[first_date, last_date],
+                amount__lt=0
             )
 
-            amount = sum(-p.amount for p in payments if p.amount < 0)
+            total_amount = 0
+            category_breakdown = {}
+
+            for p in payments:
+                place = p.place_id
+                cat = place.place_category_id  # PlaceCategory 객체 or tuple
+
+                # ✅ 문자열 카테고리명으로 정규화
+                if hasattr(cat, "name"):
+                    category_name = cat.name
+                elif isinstance(cat, tuple):
+                    category_name = cat[1] if len(cat) > 1 else str(cat[0])
+                else:
+                    category_name = str(cat)
+
+                if category_name == "금융":
+                    continue
+
+                spend = -p.amount
+                total_amount += spend
+                category_breakdown[category_name] = category_breakdown.get(category_name, 0) + spend
 
             return Response(
                 {
                     "period": period_type,
                     "start_date": first_date,
                     "end_date": last_date,
-                    "consumption_amount": amount
+                    "total_consumption_amount": total_amount,
+                    "category_breakdown": category_breakdown
                 },
                 status=status.HTTP_200_OK
             )
 
         except Exception as e:
-            return Response(
-                {"error": "failed", "details": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
+            return Response({"error": "failed", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

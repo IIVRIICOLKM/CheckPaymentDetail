@@ -4,9 +4,11 @@ import pymysql
 from datetime import datetime
 from dotenv import load_dotenv
 import os
+from PaymentApp.Utils.place_name_classifier import CATEGORY_RULES, classify_place_category
 
 load_dotenv()
 db_name = os.getenv('MYSQL_DATABASE')
+TEST_ID = "djrlee1"
 
 def set_bank_table(banks : list, addresses : list, mysql_cur):
     try:
@@ -39,7 +41,7 @@ def set_account_table(accountmap : dict, account_nums : list, mysql_cur):
                 for account_num in account_nums:
                     if accountmap[account_num] == _bank_name:
                         mysql_cur.execute(
-                            f'insert into {db_name}.account (number, created_at, bank_id, user_id) values ("{account_num}", "{datetime.now()}", "{_bank_id}", "djrlee1");')
+                            f'insert into {db_name}.account (number, created_at, bank_id, user_id) values ("{account_num}", "{datetime.now()}", "{_bank_id}", "{TEST_ID}");')
             else:
                 for account_num in account_nums:
                     count = 0
@@ -49,7 +51,41 @@ def set_account_table(accountmap : dict, account_nums : list, mysql_cur):
                             count += 1
                     if (count == 0) and (accountmap[account_num] == _bank_name):
                         mysql_cur.execute(
-                            f'insert into {db_name}.account (number, created_at, bank_id, user_id) values ("{account_num}", "{datetime.now()}", "{_bank_id}", "djrlee1");')
+                            f'insert into {db_name}.account (number, created_at, bank_id, user_id) values ("{account_num}", "{datetime.now()}", "{_bank_id}", "{TEST_ID}");')
+
+    except Exception as e:
+        print(e)
+
+def set_place_category_table(mysql_cur):
+    try:
+        keylist = list(CATEGORY_RULES.keys())
+        overpayed_flag = [0, 0, 0, 0, 0, 1, 0]
+
+        for i in range(len(keylist)):
+            category_name = keylist[i]
+
+            # 이미 존재하는지 확인
+            mysql_cur.execute(
+                f'''
+                SELECT 1 
+                FROM {db_name}.place_category 
+                WHERE name = %s
+                LIMIT 1
+                ''',
+                (category_name,)
+            )
+
+            exists = mysql_cur.fetchone()
+
+            # 존재하지 않을 때만 INSERT
+            if not exists:
+                mysql_cur.execute(
+                    f'''
+                    INSERT INTO {db_name}.place_category (name, over_payed_flag)
+                    VALUES (%s, %s)
+                    ''',
+                    (category_name, overpayed_flag[i])
+                )
 
     except Exception as e:
         print(e)
@@ -57,8 +93,17 @@ def set_account_table(accountmap : dict, account_nums : list, mysql_cur):
 
 def set_place_table(place_name : str, mysql_cur):
     # 임시로 카테고리 1로 설정
+    category_name = classify_place_category(place_name)
+
     try:
-        mysql_cur.execute(f'insert into {db_name}.place (name, is_financial_transaction, place_category_id) values ("{place_name}", 0, 1);')
+        mysql_cur.execute(f'SELECT id FROM {db_name}.place_category WHERE name = "{category_name}";')
+        category_id = mysql_cur.fetchone()[0]
+
+        if category_id != 5:
+            mysql_cur.execute(f'insert into {db_name}.place (name, is_financial_transaction, place_category_id) values ("{place_name}", 0, "{category_id}");')
+        else:
+            mysql_cur.execute(
+                f'insert into {db_name}.place (name, is_financial_transaction, place_category_id) values ("{place_name}", 1, "{category_id}");')
         mysql_cur.execute('SELECT LAST_INSERT_ID();')
         new_id = mysql_cur.fetchone()[0]
 
@@ -77,6 +122,8 @@ def parse_payment_to_database(table : list, banks : list, addresses : list, acco
     try:
         set_bank_table(banks=banks, addresses=addresses, mysql_cur=mysql_cur)
         set_account_table(accountmap=accountmap, account_nums=account_nums, mysql_cur=mysql_cur)
+        set_place_category_table(mysql_cur)
+
         mysql_cur.execute(f'truncate {db_name}.payment;')
 
         count = 0
@@ -95,7 +142,7 @@ def parse_payment_to_database(table : list, banks : list, addresses : list, acco
             _balance = row[4]
 
             mysql_cur.execute(f'insert into {db_name}.payment (payment_day, amount, balance, account_id, account_number, place_id, user_id)'
-                              f'values ("{_payment_day}", "{_amount}", "{_balance}", "{_account_id}", "{_account_number}", "{new_id}", "djrlee1");')
+                              f'values ("{_payment_day}", "{_amount}", "{_balance}", "{_account_id}", "{_account_number}", "{new_id}", "{TEST_ID}");')
             count += 1
         print(f'{count}개 레코드 생성 완료!!')
     except Exception as e:
@@ -107,10 +154,14 @@ def parse_payment_to_database(table : list, banks : list, addresses : list, acco
 def pipeline():
     messages = get_messages('sms_backup_20250729.csv')
     messages = preprocessing_date(messages)
-    # 단일 은행의 전화번호만 가져온다고 가정하기
-    address = messages[0][2]
     payment_table, banks, addresses, accountmap, account_nums = messages_to_columned_datas(messages)
-    parse_payment_to_database(table=payment_table, banks=banks, addresses=addresses, accountmap=accountmap, account_nums=account_nums)
+    parse_payment_to_database(
+        table=payment_table,
+        banks=banks,
+        addresses=addresses,
+        accountmap=accountmap,
+        account_nums=account_nums
+    )
 
 if __name__ == '__main__':
     pipeline()

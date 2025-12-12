@@ -1,42 +1,45 @@
-import pandas as pd
-from PaymentApp.DataSets.dataset_dir import dataset_dir
+from PaymentApp.Utils.placenormalizer import normalize_place_name, ngram_containment_similarity
 
-df_m, df_w = pd.read_csv(dataset_dir + 'men_names.csv'), pd.read_csv(dataset_dir + 'women_names.csv')
-df_m, df_w = df_m[df_m['weight'] > 11], df_w[df_w['weight'] > 11]
+# 🔹 카테고리 룰 (DB 카테고리와 1:1 대응 가능)
+CATEGORY_RULES = {
+    "카페": ["카페", "스타벅스", "이디야", "투썸", "메가커피", "빽다방", "우지커피", "컴포즈", "바나프레소", "커피빈",
+           "숨맑은집", "엔제리너스", "할리스", "감성커피"],
+    "편의점": ["CU", "씨유", "GS25", "지에스25", "세븐일레븐", "이마트24"],
+    "패스트푸드": ["롯데리아", "맥도날드", "버거킹", "KFC", "맘스터치"],
+    "식당": ["김밥천국", "한솥", "본죽", "홍콩반점"],
+    "문화/여가": ["CGV", "메가박스", "롯데시네마", "PC방", "피시", "피씨"],
+    "금융": ["토스", "카카오뱅크", "신한", "국민", "이체", "입금", "출금", "신영미", "이건민"],
+    "기타": []
+}
 
-import pandas as pd
-from PaymentApp.DataSets.dataset_dir import dataset_dir
+NGRAM_SIZE = 2
+SIMILARITY_THRESHOLD = 0.5  # n-gram 기준에서는 0.4~0.5가 적절
 
-def place_name_classifier(place : str) -> float:
-    # 인덱스 새로 바인딩
-    df_m.index, df_w.index = [i for i in range (0, len(df_m))], [i for i in range (0, len(df_w))]
-    men_names, women_names = df_m['name'].tolist(), df_w['name'].tolist()
-    result_men, result_women = binary_searchNget_index(men_names, place), binary_searchNget_index(women_names, place)
-    if result_men[0] & result_women[0]:
-        return df_m['percentage'][result_men[1]] \
-            if df_m['percentage'][result_men[1]] > df_w['percentage'][result_women[1]] \
-            else df_w['percentage'][result_women[1]]
-    elif result_men[0]:
-        return df_m['percentage'][result_men[1]]
-    elif result_women[0]:
-        return df_w['percentage'][result_women[1]]
-    else:
-        return 0.0
 
-def binary_searchNget_index(l : list, find_str : str):
-    data_length = len(l)
-    start, end = 0, data_length - 1
-    mid = (start + end) // 2
+def classify_place_category(place_name: str) -> str:
+    """
+    n-gram 기반 장소 카테고리 분류
+    """
+    normalized = normalize_place_name(place_name)
 
-    if l[mid] == find_str:
-        return True, mid
+    best_category = "기타"
+    best_score = 0.0
 
-    while start <= end:
-        if l[mid] > find_str:
-            end = mid - 1
-        elif l[mid] < find_str:
-            start = mid + 1
-        else:
-            return True, mid
-        mid = (start + end) // 2
-    return False, -1
+    for category, keywords in CATEGORY_RULES.items():
+        for keyword in keywords:
+            score = ngram_containment_similarity(normalized, keyword, NGRAM_SIZE)
+            if score > best_score:
+                best_score = score
+                best_category = category
+
+    if best_score >= SIMILARITY_THRESHOLD:
+        return best_category
+
+    return "기타"
+
+
+def is_financial_category(category: str) -> bool:
+    """
+    금융 카테고리 여부 판단 (소비 합산 제외용)
+    """
+    return category == "금융"

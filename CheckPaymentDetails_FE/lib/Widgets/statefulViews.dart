@@ -3,6 +3,7 @@ import 'package:payment_app/Services/fetchPaymentInformationService.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:dio/dio.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 // Bank Tab
 class Bank{
@@ -255,14 +256,31 @@ class _PaymentPresentationState extends State<PaymentPresentation>{
                   Text('${oneYearAgo.year}년 ${oneYearAgo.month}월 ${oneYearAgo.day}일 부터 '
                       '${widget.selectedDay!.year}년 ${widget.selectedDay!.month}월 ${widget.selectedDay!.day}일 까지의 소비내역입니다.'),
                 if (widget.response != null)
-                  Text('총 소비액은 ${widget.response!.data['consumption_amount']}원 입니다.'),
+                  Text('총 소비액은 ${widget.response!.data['total_consumption_amount']}원 입니다.'),
                 SizedBox(height: 40),
-                Container(
-                  width: 300,
-                  height: 300,
-                  padding: EdgeInsets.all(20),
-                  color: Colors.greenAccent,
-                ),
+                if (widget.response != null)
+                  Container(
+                    width: 300,
+                    height: 300,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 20),
+                          CategoryPieChart(
+                            categoryAmounts:
+                            (widget.response!.data['category_breakdown'] as Map<String, dynamic>)
+                                .map((key, value) => MapEntry(key, (value as num).toDouble())),
+                          ),
+                        ],
+                      )
+                    ),
+                  ),
+
                 Divider(height: 2, color: Colors.black)
               ],
             );
@@ -318,3 +336,115 @@ class _TableCalendarScreenState extends State<TableCalendarScreen> {
     );
   }
 }
+
+class CategoryPieChart extends StatelessWidget {
+  final Map<String, double> categoryAmounts;
+
+  const CategoryPieChart({super.key, required this.categoryAmounts});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = categoryAmounts.values.fold(0.0, (a, b) => a + b);
+
+    if (total == 0) {
+      return const Center(child: Text("소비 내역 없음"));
+    }
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 200,
+          child: PieChart(
+            PieChartData(
+              sectionsSpace: 2,
+              centerSpaceRadius: 40,
+              sections: categoryAmounts.entries.map((entry) {
+                final percent = entry.value / total * 100;
+
+                return PieChartSectionData(
+                  value: entry.value,
+                  color: _categoryColor(entry.key),
+                  radius: 70,
+                  // ✅ 차트에는 퍼센트만
+                  title: '${percent.toStringAsFixed(1)}%',
+                  titleStyle: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // ✅ Legend: 카테고리 + 금액 + 비율
+        Column(
+          children: categoryAmounts.entries.map((entry) {
+            final percent = entry.value / total * 100;
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: _categoryColor(entry.key),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      entry.key,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                  Text(
+                    '${_formatCurrency(entry.value)} · ${percent.toStringAsFixed(1)}%',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  String _formatCurrency(double value) {
+    final s = value.toInt().toString();
+    return '${s.replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+          (m) => '${m[1]},',
+    )}원';
+  }
+
+  Color _categoryColor(String category) {
+    switch (category) {
+      case '카페':
+        return Colors.brown.shade300;
+      case '편의점':
+        return Colors.greenAccent;
+      case '패스트푸드':
+        return Colors.redAccent;
+      case '식당':
+        return Colors.orangeAccent;
+      case '문화/여가':
+        return Colors.purpleAccent;
+      case '기타':
+        return Colors.grey;
+      default:
+        return Colors.blueGrey;
+    }
+  }
+}
+
