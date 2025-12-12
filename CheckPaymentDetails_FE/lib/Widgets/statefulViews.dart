@@ -277,8 +277,8 @@ class _PaymentPresentationState extends State<PaymentPresentation>{
                 SizedBox(height: 40),
                 if (widget.response != null)
                   Container(
-                    width: 300,
-                    height: 300,
+                    width: 220,
+                    height: 220,
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -367,29 +367,38 @@ class CategoryPieChart extends StatelessWidget {
       return const Center(child: Text("소비 내역 없음"));
     }
 
-    // 금액 기준 내림차순 정렬
+    // 금액 기준 내림차순 정렬 (레전드 기준)
     final sortedEntries = categoryAmounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    // 가장 큰 카테고리
+    // 가장 큰 카테고리 (강조 기준)
     final topCategory = sortedEntries.first.key;
+
+    // 🔹 차트에만 사용: 4% 이상 항목만 표시
+    final chartEntries = sortedEntries.where((entry) {
+      final percent = entry.value / total * 100;
+      return percent >= 4.0;
+    }).toList();
 
     return Column(
       children: [
+        // ======================
+        // Pie Chart (4% 이상만)
+        // ======================
         SizedBox(
-          height: 200,
+          height: 110,
           child: PieChart(
             PieChartData(
               sectionsSpace: 2,
-              centerSpaceRadius: 40,
-              sections: sortedEntries.map((entry) {
+              centerSpaceRadius: 20,
+              sections: chartEntries.map((entry) {
                 final percent = entry.value / total * 100;
                 final isTop = entry.key == topCategory;
 
                 return PieChartSectionData(
                   value: entry.value,
                   color: _categoryColor(entry.key),
-                  radius: isTop ? 78 : 70,
+                  radius: isTop ? 60 : 52,
                   title: '${percent.toStringAsFixed(1)}%',
                   titleStyle: TextStyle(
                     fontSize: 11,
@@ -404,7 +413,9 @@ class CategoryPieChart extends StatelessWidget {
 
         const SizedBox(height: 12),
 
-        // ✅ Legend (금액 내림차순 + 최상위 강조)
+        // ======================
+        // Legend (전체 표시)
+        // ======================
         Column(
           children: sortedEntries.map((entry) {
             final percent = entry.value / total * 100;
@@ -428,7 +439,8 @@ class CategoryPieChart extends StatelessWidget {
                       entry.key,
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: isTop ? FontWeight.bold : FontWeight.normal,
+                        fontWeight:
+                        isTop ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -436,7 +448,8 @@ class CategoryPieChart extends StatelessWidget {
                     '${_formatCurrency(entry.value)} · ${percent.toStringAsFixed(1)}%',
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: isTop ? FontWeight.bold : FontWeight.normal,
+                      fontWeight:
+                      isTop ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                 ],
@@ -447,6 +460,10 @@ class CategoryPieChart extends StatelessWidget {
       ],
     );
   }
+
+  // ======================
+  // Utils
+  // ======================
 
   String _formatCurrency(double value) {
     final s = value.toInt().toString();
@@ -475,3 +492,4 @@ class CategoryPieChart extends StatelessWidget {
     }
   }
 }
+
